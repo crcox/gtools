@@ -1,0 +1,5 @@
+.env/
+buckets/
+**/__pycache__
+read_from_gcloud.html
+read_from_gcloud.pdf

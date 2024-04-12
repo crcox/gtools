@@ -4,7 +4,7 @@ from collections import namedtuple
 from collections.abc import Iterable
 from pathlib import Path, PurePath
 from google.cloud.storage import client, Blob, Bucket, transfer_manager
-from datastructs import ModelInfo, ModelState
+from gtools.datastructs import ModelInfo, ModelState
 
 
 def ModelInfoFromBlob(blob: Blob) -> ModelInfo:
@@ -100,7 +100,20 @@ def list_model_info(bucket: Bucket, run_name: str, sorted=True) -> list[ModelInf
         return sort_modelinfo_by_lesion_onset(model_info)
 
     return model_info
-        
+
+def list_model_info_path(path: Path, sorted=True) -> list[ModelInfo]:
+    if not isinstance(path, PurePath):
+        path = Path(path)
+
+    pattern = str(PurePath("*", "config.json"))
+    model_info = [ModelInfoFromFile(file)
+                  for file
+                  in path.glob(pattern)]
+    if sorted:
+        return sort_modelinfo_by_lesion_onset(model_info)
+
+    return model_info
+
 
 def sort_epochs(epoch_blobs: list[Blob]) -> list[Blob]:
     def extract_epoch_count(blob: Blob) -> int:
@@ -258,23 +271,24 @@ if __name__ == "__main__":
     epochs = list_epoch_blobs(B, run_name, wandb_id)
 
     # Download the state data
-    #m = ModelStateFromBlob(epochs[-1])
+    m = ModelStateFromBlob(epochs[-1])
 
     # Write downloaded data to file
     ModelInfoToFile(model_info[-1], bucket_name, "buckets")
-    #ModelStateToFile(m, bucket_name, "buckets")
+    ModelStateToFile(m, bucket_name, "buckets")
 
     # Write directly to file (picking a new model and epoch)
+    run_name = "s200_mono"
     model_info_blobs = list_model_info_blobs(B, run_name)
-    config_from_blob = ModelInfoFromBlob(model_info_blobs[0])
+    config_from_blob = ModelInfoFromBlob(model_info_blobs[-1])
     wandb_id = config_from_blob.wandb_id
     epochs = list_epoch_blobs(B, run_name, wandb_id)
     BlobToFile(model_info_blobs[0], "buckets")
-    #BlobToFile(epochs[-1], "buckets")
+    BlobToFile(epochs[-1], "buckets")
 
     # Read from file
-    config_from_file = ModelInfoFromFile(
-        "buckets/time-varying-reader-runs/s200_intact_freeze_phon/1nexxgef/config.json",
-        "time-varying-reader-runs")
-    print(config_from_blob)
-    print(config_from_file)
+    #config_from_file = ModelInfoFromFile(
+    #    "buckets/time-varying-reader-runs/s200_intact_freeze_phon/1nexxgef/config.json",
+    #    "time-varying-reader-runs")
+    #print(config_from_blob)
+    #print(config_from_file)
